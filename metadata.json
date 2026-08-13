@@ -1,0 +1,6 @@
+{
+  "name": "Neural Net Painter",
+  "description": "Interactive AI and Human-Robot Collaboration canvas for Convolutional Style-Transfer, CNN feature map inspection, and robotic co-painting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
