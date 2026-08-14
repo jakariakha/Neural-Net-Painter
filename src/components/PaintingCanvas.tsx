@@ -558,6 +558,7 @@ export const PaintingCanvas: React.FC<PaintingCanvasProps> = ({
         <div className="relative w-[340px] h-[340px] sm:w-[500px] sm:h-[500px] bg-slate-900 rounded-xl border-2 border-slate-800 overflow-hidden shadow-2xl cursor-crosshair">
           {/* Main Drawing Canvas */}
           <canvas
+            id="main-drawing-canvas"
             ref={canvasRef}
             width={canvasWidth}
             height={canvasHeight}

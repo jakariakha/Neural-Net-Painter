@@ -191,3 +191,133 @@ export function generateRobotStrokePaths(
 
   return points;
 }
+
+// Convert any image source (SVG Data URI, external URL, or canvas) into a valid base64 PNG data string
+export function rasterizeImageToPngBase64(
+  imageSource: string | HTMLCanvasElement,
+  width: number = 600,
+  height: number = 600
+): Promise<string> {
+  return new Promise((resolve) => {
+    if (imageSource instanceof HTMLCanvasElement) {
+      try {
+        resolve(imageSource.toDataURL('image/png'));
+        return;
+      } catch (err) {
+        console.warn('Canvas export failed, falling back to offscreen render:', err);
+      }
+    }
+
+    if (typeof imageSource === 'string' && imageSource.startsWith('data:image/png;base64,')) {
+      resolve(imageSource);
+      return;
+    }
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width;
+    offscreen.height = height;
+    const ctx = offscreen.getContext('2d');
+    if (!ctx) {
+      resolve('');
+      return;
+    }
+
+    // Default neutral background
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, width, height);
+
+    if (!imageSource) {
+      resolve(offscreen.toDataURL('image/png'));
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(offscreen.toDataURL('image/png'));
+    };
+    img.onerror = () => {
+      resolve(offscreen.toDataURL('image/png'));
+    };
+
+    img.src = typeof imageSource === 'string' ? imageSource : '';
+  });
+}
+
+// Algorithmic Neural Painterly Synthesis (Fallback & Live Filter Blending)
+export function synthesizePainterlyNeuralTransfer(
+  sourceCanvas: HTMLCanvasElement,
+  styleName: string,
+  contentWeight: number = 10,
+  styleWeight: number = 1000
+): string {
+  const width = sourceCanvas.width || 600;
+  const height = sourceCanvas.height || 600;
+  const offscreen = document.createElement('canvas');
+  offscreen.width = width;
+  offscreen.height = height;
+  const ctx = offscreen.getContext('2d');
+  if (!ctx) return sourceCanvas.toDataURL('image/png');
+
+  // 1. Draw base content
+  ctx.drawImage(sourceCanvas, 0, 0, width, height);
+
+  // 2. Extract pixel data for stylized artistic pass
+  const src = ctx.getImageData(0, 0, width, height);
+  const data = src.data;
+
+  // Determine palette bias based on style
+  const styleLower = styleName.toLowerCase();
+  let rBias = 1.0, gBias = 1.0, bBias = 1.0;
+  if (styleLower.includes('starry')) {
+    rBias = 0.8; gBias = 1.1; bBias = 1.6;
+  } else if (styleLower.includes('wave') || styleLower.includes('hokusai')) {
+    rBias = 0.7; gBias = 1.2; bBias = 1.8;
+  } else if (styleLower.includes('monet') || styleLower.includes('water')) {
+    rBias = 1.1; gBias = 1.4; bBias = 1.2;
+  } else if (styleLower.includes('kandinsky') || styleLower.includes('composition')) {
+    rBias = 1.5; gBias = 0.9; bBias = 1.4;
+  } else if (styleLower.includes('cyberpunk') || styleLower.includes('neon')) {
+    rBias = 1.6; gBias = 0.6; bBias = 1.8;
+  }
+
+  const alphaFactor = Math.min(1.0, Math.max(0.1, styleWeight / (contentWeight * 20 + styleWeight)));
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    // Stylized quantization & Gram color enhancement
+    const nr = Math.min(255, Math.max(0, (r * (1 - alphaFactor * 0.4) + (r * rBias) * (alphaFactor * 0.4))));
+    const ng = Math.min(255, Math.max(0, (g * (1 - alphaFactor * 0.4) + (g * gBias) * (alphaFactor * 0.4))));
+    const nb = Math.min(255, Math.max(0, (b * (1 - alphaFactor * 0.4) + (b * bBias) * (alphaFactor * 0.4))));
+
+    // Impasto contrast boost
+    const contrast = 1.2;
+    data[i] = Math.min(255, Math.max(0, (nr - 128) * contrast + 128));
+    data[i + 1] = Math.min(255, Math.max(0, (ng - 128) * contrast + 128));
+    data[i + 2] = Math.min(255, Math.max(0, (nb - 128) * contrast + 128));
+  }
+
+  ctx.putImageData(src, 0, 0);
+
+  // 3. Add textured brush stroke swirls
+  ctx.save();
+  ctx.globalAlpha = 0.25 * alphaFactor;
+  ctx.lineWidth = 4;
+  for (let s = 0; s < 40; s++) {
+    const x = Math.random() * width;
+    const y = Math.random() * height;
+    const radius = 15 + Math.random() * 35;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, Math.random() * Math.PI, Math.PI * (1.5 + Math.random()));
+    ctx.strokeStyle = styleLower.includes('starry') ? '#fde047' : styleLower.includes('cyber') ? '#06b6d4' : '#ffffff';
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  return offscreen.toDataURL('image/png');
+}

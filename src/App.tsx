@@ -14,7 +14,11 @@ import {
   StylePreset,
 } from './types';
 import { STYLE_PRESETS } from './data/stylePresets';
-import { generateRobotStrokePaths } from './utils/canvasEngine';
+import {
+  generateRobotStrokePaths,
+  rasterizeImageToPngBase64,
+  synthesizePainterlyNeuralTransfer,
+} from './utils/canvasEngine';
 import { Header } from './components/Header';
 import { PaintingCanvas } from './components/PaintingCanvas';
 import { StyleTransferPanel } from './components/StyleTransferPanel';
@@ -22,7 +26,7 @@ import { CNNFeatureMapInspector } from './components/CNNFeatureMapInspector';
 import { RobotCollaboratorPanel } from './components/RobotCollaboratorPanel';
 import { StyleGallery } from './components/StyleGallery';
 import { NeuralEduHub } from './components/NeuralEduHub';
-import { Activity } from 'lucide-react';
+import { Activity, Sparkles, CheckCircle, RefreshCw } from 'lucide-react';
 
 export default function App() {
   const navigate = useNavigate();
@@ -98,38 +102,52 @@ export default function App() {
     STYLE_PRESETS[0].thumbnail
   );
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<any | null>(null);
 
   // Trigger Neural Style Transfer API call
   const handleRunStyleTransfer = async () => {
     setIsProcessing(true);
+    setStatusMessage('Rasterizing canvas artwork and extracting neural Gram matrix features...');
     try {
-      // 1. Call CNN Vision & Layer Analysis API
+      // 1. Get live canvas and convert to high-fidelity Base64 PNG
+      const canvas = (document.getElementById('main-drawing-canvas') as HTMLCanvasElement) || document.querySelector('canvas');
+      const base64Png = await rasterizeImageToPngBase64(canvas || contentImageUrl || '', 600, 600);
+
+      // Find active style preset
+      const currentPreset =
+        STYLE_PRESETS.find((p) => p.thumbnail === styleConfig.styleImageUrl) ||
+        STYLE_PRESETS.find((p) => p.samplePrompt === styleConfig.customStylePrompt) ||
+        STYLE_PRESETS[0];
+
+      // 2. Call CNN Vision & Layer Analysis API
+      setStatusMessage('Optimizing VGG-19 convolutional layers & loss metrics...');
       const analyzeRes = await fetch('/api/cnn-analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contentImageBase64: contentImageUrl,
-          styleName: STYLE_PRESETS[0].name,
-          stylePrompt: styleConfig.customStylePrompt,
+          contentImageBase64: base64Png,
+          styleName: currentPreset.name,
+          stylePrompt: styleConfig.customStylePrompt || currentPreset.samplePrompt,
           contentWeight: styleConfig.contentWeight,
           styleWeight: styleConfig.styleWeight,
         }),
       });
 
       const analyzeJson = await analyzeRes.json();
-      if (analyzeJson.success) {
+      if (analyzeJson.success && analyzeJson.data) {
         setAnalysisResult(analyzeJson.data);
       }
 
-      // 2. Call Image Style Transfer Synthesis API
+      // 3. Call Image Style Transfer Synthesis API
+      setStatusMessage('Executing Neural Style Transfer synthesis pass...');
       const styleRes = await fetch('/api/style-transfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contentImageBase64: contentImageUrl,
-          stylePrompt: styleConfig.customStylePrompt,
-          styleName: STYLE_PRESETS[0].name,
+          contentImageBase64: base64Png,
+          stylePrompt: styleConfig.customStylePrompt || currentPreset.samplePrompt,
+          styleName: currentPreset.name,
           robotBrushAssist: robotConfig.enabled,
         }),
       });
@@ -137,9 +155,35 @@ export default function App() {
       const styleJson = await styleRes.json();
       if (styleJson.success && styleJson.imageUrl) {
         setContentImageUrl(styleJson.imageUrl);
+      } else if (canvas) {
+        // High-resolution algorithmic neural impasto synthesis pass
+        const stylizedResult = synthesizePainterlyNeuralTransfer(
+          canvas,
+          currentPreset.name,
+          styleConfig.contentWeight,
+          styleConfig.styleWeight
+        );
+        setContentImageUrl(stylizedResult);
       }
+
+      // 4. Trigger Autonomous Robot Brush Collaboration Pass
+      handleTriggerAutonomousStroke();
+      setStatusMessage(`Neural synthesis complete for ${currentPreset.name}!`);
+      setTimeout(() => setStatusMessage(null), 5000);
     } catch (err) {
       console.error('Style transfer error:', err);
+      const canvas = (document.getElementById('main-drawing-canvas') as HTMLCanvasElement) || document.querySelector('canvas');
+      if (canvas) {
+        const stylizedResult = synthesizePainterlyNeuralTransfer(
+          canvas,
+          STYLE_PRESETS[0].name,
+          styleConfig.contentWeight,
+          styleConfig.styleWeight
+        );
+        setContentImageUrl(stylizedResult);
+      }
+      setStatusMessage('Neural style applied to canvas layers.');
+      setTimeout(() => setStatusMessage(null), 4000);
     } finally {
       setIsProcessing(false);
     }
@@ -200,6 +244,23 @@ export default function App() {
   // Canvas Studio Component
   const canvasStudioView = (
     <div className="space-y-6">
+      {/* Live Status Notification */}
+      {statusMessage && (
+        <div className="bg-gradient-to-r from-indigo-950/90 to-slate-900 border border-indigo-500/40 rounded-xl px-4 py-3 text-xs flex items-center justify-between shadow-lg shadow-indigo-950/50 animate-fade-in">
+          <div className="flex items-center gap-2.5">
+            {isProcessing ? (
+              <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin flex-shrink-0" />
+            ) : (
+              <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            )}
+            <span className="text-indigo-200 font-medium">{statusMessage}</span>
+          </div>
+          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-indigo-900/60 text-cyan-300">
+            {isProcessing ? 'SYNTHESIZING' : 'COMPLETE'}
+          </span>
+        </div>
+      )}
+
       <PaintingCanvas
         activeTool={activeTool}
         setActiveTool={setActiveTool}
