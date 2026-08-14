@@ -4,16 +4,18 @@ import {
   applyGramTextureFilter,
   computeGramMatrixRepresentation,
 } from '../utils/canvasEngine';
-import { Cpu, Eye, Network, Layers, Sparkles, Activity, CheckCircle } from 'lucide-react';
+import { Cpu, Eye, Network, Layers, Sparkles, Activity, CheckCircle, Download } from 'lucide-react';
 
 interface CNNFeatureMapInspectorProps {
   contentImageUrl: string | null;
   styleName: string;
+  onExport?: () => void;
 }
 
 export const CNNFeatureMapInspector: React.FC<CNNFeatureMapInspectorProps> = ({
   contentImageUrl,
   styleName,
+  onExport,
 }) => {
   const [selectedLayer, setSelectedLayer] = useState<
     'Conv1_1' | 'Conv2_1' | 'Conv3_1' | 'Conv4_1' | 'Conv5_1'
@@ -130,12 +132,23 @@ export const CNNFeatureMapInspector: React.FC<CNNFeatureMapInspectorProps> = ({
             Visualize how deep Convolutional Neural Networks decompose images into hierarchical feature maps. Content representation is preserved from deep layers (Conv4_1), while Style is extracted via Gram Matrix correlation (G_ij = sum(F_ik * F_jk)) across multiple convolutional levels.
           </p>
         </div>
-        <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
-          <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
-          <div>
-            <p className="text-xs font-semibold text-slate-200">Selected Style</p>
-            <p className="text-xs font-mono text-cyan-400">{styleName || 'Starry Night'}</p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+            <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
+            <div>
+              <p className="text-xs font-semibold text-slate-200">Selected Style</p>
+              <p className="text-xs font-mono text-cyan-400">{styleName || 'Starry Night'}</p>
+            </div>
           </div>
+          {onExport && (
+            <button
+              onClick={onExport}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold text-xs border border-slate-700 transition-all shadow-md"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Feature Maps</span>
+            </button>
+          )}
         </div>
       </div>
 

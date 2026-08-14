@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import {
   ToolType,
   CanvasLayer,
@@ -18,6 +18,7 @@ import {
   generateRobotStrokePaths,
   rasterizeImageToPngBase64,
   synthesizePainterlyNeuralTransfer,
+  generateRouteExportDataUrl,
 } from './utils/canvasEngine';
 import { Header } from './components/Header';
 import { PaintingCanvas } from './components/PaintingCanvas';
@@ -30,6 +31,7 @@ import { Activity, Sparkles, CheckCircle, RefreshCw } from 'lucide-react';
 
 export default function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTool, setActiveTool] = useState<ToolType>('brush');
   const [brushColor, setBrushColor] = useState<string>('#38bdf8');
   const [brushSize, setBrushSize] = useState<number>(12);
@@ -224,43 +226,55 @@ export default function App() {
     setContentImageUrl(url);
   };
 
-  // Export Canvas artwork as PNG
-  const handleExport = () => {
-    const canvas = document.querySelector('canvas');
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = `neural-net-painter-${Date.now()}.png`;
-    link.href = dataUrl;
-    link.click();
+  // Export Canvas / Route Artwork as high-res PNG
+  const handleExport = async () => {
+    try {
+      const activePreset =
+        STYLE_PRESETS.find((p) => p.thumbnail === styleConfig.styleImageUrl) ||
+        STYLE_PRESETS.find((p) => p.samplePrompt === styleConfig.customStylePrompt) ||
+        STYLE_PRESETS[0];
+
+      const { dataUrl, filename } = await generateRouteExportDataUrl({
+        routePath: location.pathname,
+        contentImageUrl,
+        styleName: activePreset.name,
+        robotActive: robotConfig.enabled,
+      });
+
+      if (dataUrl) {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        link.click();
+        setStatusMessage(`Artwork successfully exported as ${filename}!`);
+        setTimeout(() => setStatusMessage(null), 4500);
+      }
+    } catch (err) {
+      console.error('Export error:', err);
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `neural-art-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+      }
+      setStatusMessage('Artwork exported successfully.');
+      setTimeout(() => setStatusMessage(null), 3000);
+    }
   };
 
   // Reset Canvas
   const handleResetCanvas = () => {
     setContentImageUrl(null);
     setAnalysisResult(null);
+    setStatusMessage('Canvas reset to blank layer.');
+    setTimeout(() => setStatusMessage(null), 3000);
   };
 
   // Canvas Studio Component
   const canvasStudioView = (
     <div className="space-y-6">
-      {/* Live Status Notification */}
-      {statusMessage && (
-        <div className="bg-gradient-to-r from-indigo-950/90 to-slate-900 border border-indigo-500/40 rounded-xl px-4 py-3 text-xs flex items-center justify-between shadow-lg shadow-indigo-950/50 animate-fade-in">
-          <div className="flex items-center gap-2.5">
-            {isProcessing ? (
-              <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin flex-shrink-0" />
-            ) : (
-              <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            )}
-            <span className="text-indigo-200 font-medium">{statusMessage}</span>
-          </div>
-          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-indigo-900/60 text-cyan-300">
-            {isProcessing ? 'SYNTHESIZING' : 'COMPLETE'}
-          </span>
-        </div>
-      )}
-
       <PaintingCanvas
         activeTool={activeTool}
         setActiveTool={setActiveTool}
@@ -342,6 +356,11 @@ export default function App() {
     </div>
   );
 
+  const activeStylePreset =
+    STYLE_PRESETS.find((p) => p.thumbnail === styleConfig.styleImageUrl) ||
+    STYLE_PRESETS.find((p) => p.samplePrompt === styleConfig.customStylePrompt) ||
+    STYLE_PRESETS[0];
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
       {/* Header Navigation with Route Links */}
@@ -354,6 +373,23 @@ export default function App() {
 
       {/* Main Content Body with Route Definitions */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+        {/* Global Live Status Notification */}
+        {statusMessage && (
+          <div className="bg-gradient-to-r from-indigo-950/90 to-slate-900 border border-indigo-500/40 rounded-xl px-4 py-3 text-xs flex items-center justify-between shadow-lg shadow-indigo-950/50 animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              {isProcessing ? (
+                <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin flex-shrink-0" />
+              ) : (
+                <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              )}
+              <span className="text-indigo-200 font-medium">{statusMessage}</span>
+            </div>
+            <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-indigo-900/60 text-cyan-300">
+              {isProcessing ? 'SYNTHESIZING' : 'ACTIVE'}
+            </span>
+          </div>
+        )}
+
         <Routes>
           <Route path="/" element={canvasStudioView} />
           <Route path="/canvas" element={canvasStudioView} />
@@ -362,7 +398,8 @@ export default function App() {
             element={
               <CNNFeatureMapInspector
                 contentImageUrl={contentImageUrl}
-                styleName={STYLE_PRESETS[0].name}
+                styleName={activeStylePreset.name}
+                onExport={handleExport}
               />
             }
           />
@@ -373,15 +410,21 @@ export default function App() {
                 robotConfig={robotConfig}
                 setRobotConfig={setRobotConfig}
                 onTriggerAutonomousStroke={handleTriggerAutonomousStroke}
+                onExport={handleExport}
               />
             }
           />
           <Route
             path="/gallery"
-            element={<StyleGallery onSelectPreset={handleSelectPreset} />}
+            element={
+              <StyleGallery
+                onSelectPreset={handleSelectPreset}
+                onExport={handleExport}
+              />
+            }
           />
-          <Route path="/neural-hub" element={<NeuralEduHub />} />
-          <Route path="/edu-hub" element={<NeuralEduHub />} />
+          <Route path="/neural-hub" element={<NeuralEduHub onExport={handleExport} />} />
+          <Route path="/edu-hub" element={<NeuralEduHub onExport={handleExport} />} />
           <Route path="*" element={<Navigate to="/canvas" replace />} />
         </Routes>
       </main>

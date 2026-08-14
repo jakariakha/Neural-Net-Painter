@@ -1,11 +1,15 @@
 import React from 'react';
-import { BookOpen, Cpu, Sparkles, Network, Bot } from 'lucide-react';
+import { BookOpen, Cpu, Sparkles, Network, Bot, Download } from 'lucide-react';
 
-export const NeuralEduHub: React.FC = () => {
+interface NeuralEduHubProps {
+  onExport?: () => void;
+}
+
+export const NeuralEduHub: React.FC<NeuralEduHubProps> = ({ onExport }) => {
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       {/* Banner */}
-      <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="relative z-10 space-y-3">
           <div className="flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-cyan-400" />
@@ -20,6 +24,15 @@ export const NeuralEduHub: React.FC = () => {
             Neural Style Transfer uses deep Convolutional Neural Networks (CNNs) like VGG-19 to separate and recombine the <span className="text-cyan-300 font-semibold">content</span> of one image with the <span className="text-indigo-300 font-semibold">artistic style</span> of another, enabling seamless human and robotic collaboration.
           </p>
         </div>
+        {onExport && (
+          <button
+            onClick={onExport}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold text-xs border border-slate-700 transition-all shadow-md flex-shrink-0 relative z-10"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export Blueprint</span>
+          </button>
+        )}
       </div>
 
       {/* 3 Core Educational Columns */}

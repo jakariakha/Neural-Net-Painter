@@ -1,17 +1,19 @@
 import React from 'react';
 import { RobotArmConfig, CollaborationMode } from '../types';
-import { Bot, Zap, Cpu, Gauge, Compass, Radio, Activity, Play, Pause, RefreshCw } from 'lucide-react';
+import { Bot, Zap, Cpu, Gauge, Compass, Radio, Activity, Play, Pause, RefreshCw, Download } from 'lucide-react';
 
 interface RobotCollaboratorPanelProps {
   robotConfig: RobotArmConfig;
   setRobotConfig: React.Dispatch<React.SetStateAction<RobotArmConfig>>;
   onTriggerAutonomousStroke: () => void;
+  onExport?: () => void;
 }
 
 export const RobotCollaboratorPanel: React.FC<RobotCollaboratorPanelProps> = ({
   robotConfig,
   setRobotConfig,
   onTriggerAutonomousStroke,
+  onExport,
 }) => {
   return (
     <div className="space-y-6">
@@ -34,13 +36,25 @@ export const RobotCollaboratorPanel: React.FC<RobotCollaboratorPanelProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={onTriggerAutonomousStroke}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all"
-        >
-          <Zap className="w-4 h-4 text-yellow-300" />
-          <span>Execute Autonomous AI Stroke Pass</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {onExport && (
+            <button
+              onClick={onExport}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold text-xs border border-slate-700 transition-all shadow-md"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Telemetry Art</span>
+            </button>
+          )}
+
+          <button
+            onClick={onTriggerAutonomousStroke}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all"
+          >
+            <Zap className="w-4 h-4 text-yellow-300" />
+            <span>Execute Autonomous AI Stroke Pass</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

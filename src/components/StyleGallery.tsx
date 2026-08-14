@@ -1,13 +1,24 @@
 import React from 'react';
 import { STYLE_PRESETS } from '../data/stylePresets';
 import { StylePreset } from '../types';
-import { Sparkles, Grid, ArrowRight, Play, Layers } from 'lucide-react';
+import { Sparkles, Grid, ArrowRight, Play, Layers, Download } from 'lucide-react';
+import { rasterizeImageToPngBase64 } from '../utils/canvasEngine';
 
 interface StyleGalleryProps {
   onSelectPreset: (preset: StylePreset) => void;
+  onExport?: () => void;
 }
 
-export const StyleGallery: React.FC<StyleGalleryProps> = ({ onSelectPreset }) => {
+export const StyleGallery: React.FC<StyleGalleryProps> = ({ onSelectPreset, onExport }) => {
+  const handleDownloadPreset = async (preset: StylePreset, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const dataUrl = await rasterizeImageToPngBase64(preset.thumbnail, 600, 600);
+    const link = document.createElement('a');
+    link.download = `masterpiece-${preset.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+    link.href = dataUrl;
+    link.click();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -21,6 +32,15 @@ export const StyleGallery: React.FC<StyleGalleryProps> = ({ onSelectPreset }) =>
             Explore world-renowned artistic movements and style transfer presets. Each masterpiece includes recommended Gram Matrix layer weights and sample prompts for Instant Neural Canvas Loading.
           </p>
         </div>
+        {onExport && (
+          <button
+            onClick={onExport}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold text-xs border border-slate-700 transition-all shadow-md flex-shrink-0"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export Active Masterpiece</span>
+          </button>
+        )}
       </div>
 
       {/* Masterpieces Grid */}
@@ -45,11 +65,20 @@ export const StyleGallery: React.FC<StyleGalleryProps> = ({ onSelectPreset }) =>
 
               {/* Card Details */}
               <div className="p-5 space-y-3">
-                <div>
-                  <h3 className="text-base font-bold text-white group-hover:text-indigo-400 transition-colors">
-                    {preset.name}
-                  </h3>
-                  <p className="text-xs font-medium text-slate-400">{preset.artist}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-base font-bold text-white group-hover:text-indigo-400 transition-colors">
+                      {preset.name}
+                    </h3>
+                    <p className="text-xs font-medium text-slate-400">{preset.artist}</p>
+                  </div>
+                  <button
+                    onClick={(e) => handleDownloadPreset(preset, e)}
+                    title={`Export ${preset.name} as PNG`}
+                    className="p-2 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-800 transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">

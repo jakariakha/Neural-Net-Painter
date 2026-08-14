@@ -321,3 +321,243 @@ export function synthesizePainterlyNeuralTransfer(
 
   return offscreen.toDataURL('image/png');
 }
+
+// Universal High-Resolution Art Exporter for All Modes & Routes
+export async function generateRouteExportDataUrl(options: {
+  routePath: string;
+  contentImageUrl: string | null;
+  styleName?: string;
+  robotActive?: boolean;
+}): Promise<{ dataUrl: string; filename: string }> {
+  const { routePath, contentImageUrl, styleName = 'Neural-Art', robotActive } = options;
+  const timestamp = Date.now();
+
+  // Helper to get fallback canvas if element exists
+  const mainCanvas = document.getElementById('main-drawing-canvas') as HTMLCanvasElement;
+  const anyCanvas = document.querySelector('canvas') as HTMLCanvasElement;
+
+  // Case 1: CNN Feature Maps Inspector Route
+  if (routePath.includes('cnn-inspector')) {
+    const origCanvas = document.querySelectorAll('canvas')[0] as HTMLCanvasElement;
+    const featCanvas = document.querySelectorAll('canvas')[1] as HTMLCanvasElement;
+
+    const width = 800;
+    const height = 450;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width;
+    offscreen.height = height;
+    const ctx = offscreen.getContext('2d');
+
+    if (ctx) {
+      // Dark slate studio background
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, width, height);
+
+      // Header Banner
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(20, 20, width - 40, 50);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText(`VGG-19 Convolutional Feature Maps — ${styleName}`, 40, 52);
+
+      // Draw original if available
+      if (origCanvas) {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(40, 90, 320, 320);
+        ctx.drawImage(origCanvas, 40, 90, 320, 320);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('Original Canvas Input', 40, 430);
+      }
+
+      // Draw feature activation if available
+      if (featCanvas) {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(440, 90, 320, 320);
+        ctx.drawImage(featCanvas, 440, 90, 320, 320);
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('Neural Layer Gram Filter Pass', 440, 430);
+      }
+
+      return {
+        dataUrl: offscreen.toDataURL('image/png'),
+        filename: `cnn-feature-map-${styleName.toLowerCase().replace(/\s+/g, '-')}-${timestamp}.png`,
+      };
+    }
+  }
+
+  // Case 2: Robot Collab Route
+  if (routePath.includes('robot-collab')) {
+    const width = 700;
+    const height = 700;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width;
+    offscreen.height = height;
+    const ctx = offscreen.getContext('2d');
+
+    if (ctx) {
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw active artwork background or styled canvas
+      if (contentImageUrl) {
+        const bgImg = new Image();
+        bgImg.crossOrigin = 'anonymous';
+        await new Promise((resolve) => {
+          bgImg.onload = () => {
+            ctx.drawImage(bgImg, 50, 80, 600, 540);
+            resolve(true);
+          };
+          bgImg.onerror = () => resolve(false);
+          bgImg.src = contentImageUrl;
+        });
+      } else if (mainCanvas || anyCanvas) {
+        ctx.drawImage(mainCanvas || anyCanvas, 50, 80, 600, 540);
+      }
+
+      // Draw Robot Telemetry HUD Overlay
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(50, 20, 600, 48);
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(50, 20, 600, 48);
+
+      ctx.fillStyle = '#22d3ee';
+      ctx.font = 'bold 14px monospace';
+      ctx.fillText(`🤖 ROBOT ARM CO-CREATION TELEMETRY [2D IK ACTIVE]`, 70, 50);
+
+      // Trajectory markings
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(350, 350, 180, 0, Math.PI * 1.5);
+      ctx.stroke();
+
+      return {
+        dataUrl: offscreen.toDataURL('image/png'),
+        filename: `robot-collab-art-${timestamp}.png`,
+      };
+    }
+  }
+
+  // Case 3: Style Gallery Route
+  if (routePath.includes('gallery')) {
+    const width = 600;
+    const height = 600;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width;
+    offscreen.height = height;
+    const ctx = offscreen.getContext('2d');
+
+    if (ctx) {
+      if (contentImageUrl) {
+        const bgImg = new Image();
+        bgImg.crossOrigin = 'anonymous';
+        await new Promise((resolve) => {
+          bgImg.onload = () => {
+            ctx.drawImage(bgImg, 0, 0, width, height);
+            resolve(true);
+          };
+          bgImg.onerror = () => resolve(false);
+          bgImg.src = contentImageUrl;
+        });
+      } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText(`Style Masterpiece: ${styleName}`, 50, 300);
+      }
+
+      return {
+        dataUrl: offscreen.toDataURL('image/png'),
+        filename: `masterpiece-${styleName.toLowerCase().replace(/\s+/g, '-')}-${timestamp}.png`,
+      };
+    }
+  }
+
+  // Case 4: Neural Hub Route
+  if (routePath.includes('neural-hub') || routePath.includes('edu-hub')) {
+    const width = 800;
+    const height = 480;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width;
+    offscreen.height = height;
+    const ctx = offscreen.getContext('2d');
+
+    if (ctx) {
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText('Neural Net Painter — Architecture & Loss Blueprint', 40, 50);
+
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(40, 80, 340, 340);
+      ctx.fillRect(420, 80, 340, 340);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('1. Content Loss (L_content)', 60, 120);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px monospace';
+      ctx.fillText('L = 0.5 * ||F_l - P_l||^2', 60, 160);
+
+      ctx.fillStyle = '#818cf8';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('2. Gram Style Loss (L_style)', 440, 120);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px monospace';
+      ctx.fillText('G_ij = sum_k (F_ik * F_jk)', 440, 160);
+
+      return {
+        dataUrl: offscreen.toDataURL('image/png'),
+        filename: `neural-loss-blueprint-${timestamp}.png`,
+      };
+    }
+  }
+
+  // Standard Canvas Studio Route (/canvas or /)
+  if (mainCanvas) {
+    return {
+      dataUrl: mainCanvas.toDataURL('image/png'),
+      filename: `neural-net-painter-${timestamp}.png`,
+    };
+  }
+
+  if (contentImageUrl) {
+    const rasterized = await rasterizeImageToPngBase64(contentImageUrl, 600, 600);
+    return {
+      dataUrl: rasterized,
+      filename: `neural-net-painter-${timestamp}.png`,
+    };
+  }
+
+  if (anyCanvas) {
+    return {
+      dataUrl: anyCanvas.toDataURL('image/png'),
+      filename: `neural-net-painter-${timestamp}.png`,
+    };
+  }
+
+  // Ultimate clean fallback
+  const offscreen = document.createElement('canvas');
+  offscreen.width = 600;
+  offscreen.height = 600;
+  const ctx = offscreen.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, 600, 600);
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText('Neural Net Painter Artwork', 160, 300);
+  }
+
+  return {
+    dataUrl: offscreen.toDataURL('image/png'),
+    filename: `neural-net-painter-${timestamp}.png`,
+  };
+}
+
