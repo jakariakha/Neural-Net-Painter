@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import {
   ToolType,
   CanvasLayer,
@@ -14,17 +15,17 @@ import {
 } from './types';
 import { STYLE_PRESETS } from './data/stylePresets';
 import { generateRobotStrokePaths } from './utils/canvasEngine';
-import { Header, AppMode } from './components/Header';
+import { Header } from './components/Header';
 import { PaintingCanvas } from './components/PaintingCanvas';
 import { StyleTransferPanel } from './components/StyleTransferPanel';
 import { CNNFeatureMapInspector } from './components/CNNFeatureMapInspector';
 import { RobotCollaboratorPanel } from './components/RobotCollaboratorPanel';
 import { StyleGallery } from './components/StyleGallery';
 import { NeuralEduHub } from './components/NeuralEduHub';
-import { Sparkles, Bot, Zap, Activity } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
 export default function App() {
-  const [activeMode, setActiveMode] = useState<AppMode>('canvas');
+  const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState<ToolType>('brush');
   const [brushColor, setBrushColor] = useState<string>('#38bdf8');
   const [brushSize, setBrushSize] = useState<number>(12);
@@ -171,7 +172,7 @@ export default function App() {
       customStylePrompt: preset.samplePrompt,
       styleImageUrl: preset.thumbnail,
     }));
-    setActiveMode('canvas');
+    navigate('/canvas');
   };
 
   // Select Sample Content Image
@@ -196,128 +197,132 @@ export default function App() {
     setAnalysisResult(null);
   };
 
+  // Canvas Studio Component
+  const canvasStudioView = (
+    <div className="space-y-6">
+      <PaintingCanvas
+        activeTool={activeTool}
+        setActiveTool={setActiveTool}
+        brushColor={brushColor}
+        setBrushColor={setBrushColor}
+        brushSize={brushSize}
+        setBrushSize={setBrushSize}
+        brushOpacity={brushOpacity}
+        setBrushOpacity={setBrushOpacity}
+        robotConfig={robotConfig}
+        setRobotConfig={setRobotConfig}
+        layers={layers}
+        setLayers={setLayers}
+        activeLayerId={activeLayerId}
+        setActiveLayerId={setActiveLayerId}
+        contentImageUrl={contentImageUrl}
+      />
+
+      {/* Style Transfer Loss Control Panel */}
+      <StyleTransferPanel
+        styleConfig={styleConfig}
+        setStyleConfig={setStyleConfig}
+        onRunStyleTransfer={handleRunStyleTransfer}
+        onSelectContentSample={handleSelectContentSample}
+        isProcessing={isProcessing}
+      />
+
+      {/* Analysis Results Metrics Bar */}
+      {analysisResult && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-400" />
+              <span>Neural Analysis & Gram Loss Metrics</span>
+            </h3>
+            <span className="text-xs font-mono text-cyan-400">
+              Gram Energy: {analysisResult.aiAnalysis?.textureEnergy || 'High'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <span className="text-[10px] text-slate-400">Content Fidelity</span>
+              <p className="text-base font-bold font-mono text-cyan-400">
+                {analysisResult.contentFidelityScore || 85}%
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <span className="text-[10px] text-slate-400">Style Adherence</span>
+              <p className="text-base font-bold font-mono text-indigo-400">
+                {analysisResult.styleAdherenceScore || 92}%
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <span className="text-[10px] text-slate-400">Content Loss (Alpha)</span>
+              <p className="text-base font-bold font-mono text-purple-400">
+                {analysisResult.cNNMetrics?.contentLoss || 12.4}
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <span className="text-[10px] text-slate-400">Gram Loss (Beta)</span>
+              <p className="text-base font-bold font-mono text-emerald-400">
+                {analysisResult.cNNMetrics?.styleLoss || 148.2}
+              </p>
+            </div>
+          </div>
+
+          {analysisResult.aiAnalysis?.collaborationTip && (
+            <div className="p-3 bg-indigo-950/60 rounded-xl border border-indigo-800 text-xs text-indigo-200">
+              <span className="font-bold text-cyan-300">Robot Co-Pilot Suggestion: </span>
+              {analysisResult.aiAnalysis.collaborationTip}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-      {/* Header Navigation */}
+      {/* Header Navigation with Route Links */}
       <Header
-        activeMode={activeMode}
-        setActiveMode={setActiveMode}
         onExport={handleExport}
         onResetCanvas={handleResetCanvas}
         isProcessing={isProcessing}
         robotActive={robotConfig.enabled}
       />
 
-      {/* Main Content Body */}
+      {/* Main Content Body with Route Definitions */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
-        {/* MODE 1: CANVAS STUDIO */}
-        {activeMode === 'canvas' && (
-          <div className="space-y-6">
-            <PaintingCanvas
-              activeTool={activeTool}
-              setActiveTool={setActiveTool}
-              brushColor={brushColor}
-              setBrushColor={setBrushColor}
-              brushSize={brushSize}
-              setBrushSize={setBrushSize}
-              brushOpacity={brushOpacity}
-              setBrushOpacity={setBrushOpacity}
-              robotConfig={robotConfig}
-              setRobotConfig={setRobotConfig}
-              layers={layers}
-              setLayers={setLayers}
-              activeLayerId={activeLayerId}
-              setActiveLayerId={setActiveLayerId}
-              contentImageUrl={contentImageUrl}
-            />
-
-            {/* Style Transfer Loss Control Panel */}
-            <StyleTransferPanel
-              styleConfig={styleConfig}
-              setStyleConfig={setStyleConfig}
-              onRunStyleTransfer={handleRunStyleTransfer}
-              onSelectContentSample={handleSelectContentSample}
-              isProcessing={isProcessing}
-            />
-
-            {/* Analysis Results Metrics Bar */}
-            {analysisResult && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-400" />
-                    <span>Neural Analysis & Gram Loss Metrics</span>
-                  </h3>
-                  <span className="text-xs font-mono text-cyan-400">
-                    Gram Energy: {analysisResult.aiAnalysis?.textureEnergy || 'High'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    <span className="text-[10px] text-slate-400">Content Fidelity</span>
-                    <p className="text-base font-bold font-mono text-cyan-400">
-                      {analysisResult.contentFidelityScore || 85}%
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    <span className="text-[10px] text-slate-400">Style Adherence</span>
-                    <p className="text-base font-bold font-mono text-indigo-400">
-                      {analysisResult.styleAdherenceScore || 92}%
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    <span className="text-[10px] text-slate-400">Content Loss (Alpha)</span>
-                    <p className="text-base font-bold font-mono text-purple-400">
-                      {analysisResult.cNNMetrics?.contentLoss || 12.4}
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    <span className="text-[10px] text-slate-400">Gram Loss (Beta)</span>
-                    <p className="text-base font-bold font-mono text-emerald-400">
-                      {analysisResult.cNNMetrics?.styleLoss || 148.2}
-                    </p>
-                  </div>
-                </div>
-
-                {analysisResult.aiAnalysis?.collaborationTip && (
-                  <div className="p-3 bg-indigo-950/60 rounded-xl border border-indigo-800 text-xs text-indigo-200">
-                    <span className="font-bold text-cyan-300">Robot Co-Pilot Suggestion: </span>
-                    {analysisResult.aiAnalysis.collaborationTip}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* MODE 2: CNN FEATURE INSPECTOR */}
-        {activeMode === 'cnn_inspector' && (
-          <CNNFeatureMapInspector
-            contentImageUrl={contentImageUrl}
-            styleName={STYLE_PRESETS[0].name}
+        <Routes>
+          <Route path="/" element={canvasStudioView} />
+          <Route path="/canvas" element={canvasStudioView} />
+          <Route
+            path="/cnn-inspector"
+            element={
+              <CNNFeatureMapInspector
+                contentImageUrl={contentImageUrl}
+                styleName={STYLE_PRESETS[0].name}
+              />
+            }
           />
-        )}
-
-        {/* MODE 3: ROBOT COLLABORATION PANEL */}
-        {activeMode === 'robot_collab' && (
-          <RobotCollaboratorPanel
-            robotConfig={robotConfig}
-            setRobotConfig={setRobotConfig}
-            onTriggerAutonomousStroke={handleTriggerAutonomousStroke}
+          <Route
+            path="/robot-collab"
+            element={
+              <RobotCollaboratorPanel
+                robotConfig={robotConfig}
+                setRobotConfig={setRobotConfig}
+                onTriggerAutonomousStroke={handleTriggerAutonomousStroke}
+              />
+            }
           />
-        )}
-
-        {/* MODE 4: STYLE GALLERY */}
-        {activeMode === 'gallery' && (
-          <StyleGallery onSelectPreset={handleSelectPreset} />
-        )}
-
-        {/* MODE 5: NEURAL EDUCATION HUB */}
-        {activeMode === 'edu_hub' && <NeuralEduHub />}
+          <Route
+            path="/gallery"
+            element={<StyleGallery onSelectPreset={handleSelectPreset} />}
+          />
+          <Route path="/neural-hub" element={<NeuralEduHub />} />
+          <Route path="/edu-hub" element={<NeuralEduHub />} />
+          <Route path="*" element={<Navigate to="/canvas" replace />} />
+        </Routes>
       </main>
     </div>
   );
